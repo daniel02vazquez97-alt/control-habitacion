@@ -1,0 +1,243 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum EstadoHabitacion {
+  VACANTE_SUCIA
+  VACANTE_LIMPIA
+  VACANTE_INSPECCIONADA
+  BLOQUEADA
+  OCUPADA
+}
+
+enum TipoHabitacion {
+  SENCILLA
+  DOBLE
+  SUITE
+}
+
+enum RolEmpleado {
+  GERENTE
+  SUPERVISOR
+  CAMARISTA
+  AUXILIAR
+}
+
+enum TipoLimpieza {
+  SALIDA
+  CORRECCION
+  POST_REPARACION
+}
+
+enum ResultadoInspeccion {
+  APROBADA
+  NO_CUMPLE
+  DANIO
+}
+
+enum EstadoExterno {
+  DISPONIBLE
+  BLOQUEADA
+  OCUPADA
+}
+
+enum TipoReporte {
+  INICIAL
+  CAMBIO
+}
+
+enum DireccionMensaje {
+  ENTRANTE
+  SALIENTE
+}
+
+enum InterfaceIntegracion {
+  REC_HOSP_1
+  REC_HOSP_2
+  HOSP_RES_1
+  HOSP_RES_2
+}
+
+enum EstadoMensajeIntegracion {
+  PENDIENTE
+  ENTREGADO
+  FALLIDO
+  PROCESADO
+}
+
+enum OrigenBitacora {
+  USUARIO
+  RECEPCION
+  SISTEMA
+}
+
+model Habitacion {
+  id            String             @id @default(uuid())
+  noHabitacion  String             @unique
+  tipo          TipoHabitacion
+  piso          Int
+  estado        EstadoHabitacion   @default(VACANTE_LIMPIA)
+  actualizadoEn DateTime           @updatedAt
+
+  bitacoras     BitacoraEstado[]
+  asignaciones  AsignacionLimpieza[]
+  inspecciones  Inspeccion[]
+  reparaciones  Reparacion[]
+  reportes      ReporteEstado[]
+
+  @@index([estado])
+  @@index([piso])
+}
+
+model BitacoraEstado {
+  id             String           @id @default(uuid())
+  habitacionId   String
+  habitacion     Habitacion       @relation(fields: [habitacionId], references: [id], onDelete: Cascade)
+  estadoAnterior EstadoHabitacion
+  estadoNuevo    EstadoHabitacion
+  origen         OrigenBitacora
+  usuarioId      String?
+  usuario        Empleado?        @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  fechaHora      DateTime         @default(now())
+  nota           String?
+
+  @@index([habitacionId])
+  @@index([fechaHora])
+}
+
+model Empleado {
+  id                     String             @id @default(uuid())
+  nombre                 String
+  email                  String             @unique
+  passwordHash           String
+  rol                    RolEmpleado
+  activo                 Boolean            @default(true)
+  creadoEn               DateTime           @default(now())
+
+  turnos                 EmpleadoTurno[]
+  bitacoras              BitacoraEstado[]
+  asignacionesCamarista  AsignacionLimpieza[] @relation("CamaristaAsignada")
+  asignacionesAuxiliar   AsignacionLimpieza[] @relation("AuxiliarAsignado")
+  inspeccionesSupervisadas Inspeccion[]       @relation("SupervisorInspeccion")
+  reparacionesConfirmadas Reparacion[]        @relation("SupervisorReparacion")
+  reportesSupervisados   ReporteEstado[]      @relation("SupervisorReporte")
+}
+
+model Turno {
+  id         String          @id @default(uuid())
+  fecha      DateTime        @db.Date
+  horaInicio String          // e.g. "07:00"
+  horaFin    String          // e.g. "15:00"
+  creadoEn   DateTime        @default(now())
+
+  empleados  EmpleadoTurno[]
+
+  @@index([fecha])
+}
+
+model EmpleadoTurno {
+  id         String   @id @default(uuid())
+  empleadoId String
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  turnoId    String
+  turno      Turno    @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+
+  @@unique([empleadoId, turnoId])
+}
+
+model AsignacionLimpieza {
+  id                  String       @id @default(uuid())
+  habitacionId        String
+  habitacion          Habitacion   @relation(fields: [habitacionId], references: [id], onDelete: Cascade)
+  camaristaId         String
+  camarista           Empleado     @relation("CamaristaAsignada", fields: [camaristaId], references: [id])
+  auxiliarId          String
+  auxiliar            Empleado     @relation("AuxiliarAsignado", fields: [auxiliarId], references: [id])
+  limpiezaTerminada   Boolean      @default(false)
+  reposicionTerminada Boolean      @default(false)
+  tipo                TipoLimpieza @default(SALIDA)
+  detallesCorreccion  String?
+  creadaEn            DateTime     @default(now())
+  terminadaEn         DateTime?
+
+  @@index([habitacionId])
+  @@index([camaristaId])
+  @@index([auxiliarId])
+}
+
+model Inspeccion {
+  id               String              @id @default(uuid())
+  habitacionId     String
+  habitacion       Habitacion          @relation(fields: [habitacionId], references: [id], onDelete: Cascade)
+  supervisorId     String
+  supervisor       Empleado            @relation("SupervisorInspeccion", fields: [supervisorId], references: [id])
+  puntos           Json                // Array de 8 puntos { numero, descripcion, cumple, observacion }
+  hayDanio         Boolean             @default(false)
+  descripcionDanio String?
+  cumpleEstandar   Boolean             @default(true)
+  resultado        ResultadoInspeccion
+  fechaHora        DateTime            @default(now())
+
+  reparaciones     Reparacion[]
+
+  @@index([habitacionId])
+  @@index([supervisorId])
+  @@index([fechaHora])
+}
+
+model Reparacion {
+  id             String     @id @default(uuid())
+  habitacionId   String
+  habitacion     Habitacion @relation(fields: [habitacionId], references: [id], onDelete: Cascade)
+  inspeccionId   String
+  inspeccion     Inspeccion @relation(fields: [inspeccionId], references: [id], onDelete: Cascade)
+  descripcion    String
+  confirmadaPor  String?
+  confirmadaPorEmpleado Empleado? @relation("SupervisorReparacion", fields: [confirmadaPor], references: [id], onDelete: SetNull)
+  confirmadaEn   DateTime?
+  creadaEn       DateTime   @default(now())
+
+  @@index([habitacionId])
+  @@index([inspeccionId])
+}
+
+model ReporteEstado {
+  id            String        @id @default(uuid())
+  noReporte     String        @unique // FR08-03-YYYY-0001
+  anio          Int
+  consecutivo   Int
+  habitacionId  String?
+  habitacion    Habitacion?   @relation(fields: [habitacionId], references: [id], onDelete: SetNull)
+  tipo          TipoReporte   @default(CAMBIO)
+  estadoExterno EstadoExterno
+  observaciones String?
+  supervisorId  String
+  supervisor    Empleado      @relation("SupervisorReporte", fields: [supervisorId], references: [id])
+  fechaHora     DateTime      @default(now())
+  pdfPath       String?
+
+  @@unique([anio, consecutivo])
+  @@index([noReporte])
+  @@index([fechaHora])
+}
+
+model MensajeIntegracion {
+  id         String                   @id @default(uuid())
+  idMensaje  String                   @unique
+  direccion  DireccionMensaje
+  interface  InterfaceIntegracion
+  payload    Json
+  estado     EstadoMensajeIntegracion @default(PENDIENTE)
+  intentos   Int                      @default(0)
+  ultimoError String?
+  fechaHora  DateTime                 @default(now())
+
+  @@index([idMensaje])
+  @@index([estado])
+  @@index([direccion])
+}
