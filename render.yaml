@@ -1,0 +1,51 @@
+services:
+  # ----------------------------------------------------
+  # Servicio Web Backend NestJS
+  # ----------------------------------------------------
+  - type: web
+    name: hospedaje-backend
+    env: docker
+    dockerfilePath: apps/backend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hospedaje-postgres
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: RECEPCION_API_KEY
+        generateValue: true
+      - key: RESERVACIONES_WEBHOOK_URL
+        value: "" # Dejar vacío para operar en bandeja de contingencia/demo
+      - key: RESERVACIONES_WEBHOOK_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "*" # Sustituir por la URL de GitHub Pages en producción
+      - key: TZ
+        value: America/Hermosillo
+      - key: TURNO_CRON
+        value: "0 7 * * *"
+      - key: SEED_DEMO_PASSWORD
+        value: DemoPass2026!
+      - key: RUN_SEED
+        value: "true"
+
+# ----------------------------------------------------
+# Base de Datos PostgreSQL Gestionada en Render
+# ----------------------------------------------------
+databases:
+  - name: hospedaje-postgres
+    plan: free
+    region: oregon
+    databaseName: hospedaje_db
+    user: hospedaje_user
