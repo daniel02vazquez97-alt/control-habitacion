@@ -1,0 +1,114 @@
+name: CI - Integración Continua
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ----------------------------------------------------
+  # Job 1: Backend (Prisma, Postgres 16, Tests y Build)
+  # ----------------------------------------------------
+  backend:
+    name: Backend CI (PostgreSQL 16)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_hospedaje
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_hospedaje?schema=public
+      JWT_SECRET: ci-test-jwt-secret-key-2026
+      JWT_REFRESH_SECRET: ci-test-jwt-refresh-secret-key-2026
+      RECEPCION_API_KEY: demo-recepcion-key
+      SEED_DEMO_PASSWORD: DemoPass2026!
+      TZ: America/Hermosillo
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias del monorepo
+        run: npm ci
+
+      - name: Compilar paquete compartido @hospedaje/shared
+        run: npm run build:shared
+
+      - name: Verificación de estilo (ESLint)
+        run: npm run lint:backend
+
+      - name: Verificación estricta de tipos (TypeScript Typecheck)
+        run: npm --workspace=@hospedaje/backend run typecheck
+
+      - name: Generar cliente de Prisma
+        run: npm run prisma:generate
+
+      - name: Aplicar migraciones en PostgreSQL de prueba
+        run: npm run prisma:migrate
+
+      - name: Ejecutar pruebas unitarias y de integración con cobertura
+        run: npm run test:cov
+
+      - name: Compilar backend NestJS
+        run: npm run build:backend
+
+  # ----------------------------------------------------
+  # Job 2: Frontend (React 18 + Vite, Vitest y Build)
+  # ----------------------------------------------------
+  frontend:
+    name: Frontend CI (React 18 + Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias del monorepo
+        run: npm ci
+
+      - name: Compilar paquete compartido @hospedaje/shared
+        run: npm run build:shared
+
+      - name: Verificación de estilo (ESLint)
+        run: npm run lint:frontend
+
+      - name: Verificación estricta de tipos (TypeScript Typecheck)
+        run: npm --workspace=@hospedaje/frontend run typecheck
+
+      - name: Ejecutar pruebas unitarias con Vitest
+        run: npm run test:frontend
+
+      - name: Compilar frontend de producción (Vite build)
+        run: npm run build:frontend
