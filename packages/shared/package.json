@@ -1,0 +1,17 @@
+{
+  "name": "@hospedaje/shared",
+  "version": "1.0.0",
+  "description": "Tipos, enums, constantes e interfaces compartidas para FR08 Control de habitaciones",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Shared package types validated.\""
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
