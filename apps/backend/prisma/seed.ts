@@ -26,6 +26,16 @@ async function main() {
 
   console.log('--- Iniciando Seed del Sistema FR08 Control de Habitación ---');
 
+  // 0. Protección: no borrar datos existentes salvo que se fuerce con SEED_FORCE=true.
+  //    En Render el contenedor se reinicia con frecuencia y RUN_SEED=true se ejecuta en cada arranque.
+  const empleadosExistentes = await prisma.empleado.count();
+  if (empleadosExistentes > 0 && process.env.SEED_FORCE !== 'true') {
+    console.log(
+      `La base de datos ya tiene ${empleadosExistentes} empleados. Seed omitido (usa SEED_FORCE=true para reiniciar los datos de demo).`,
+    );
+    return;
+  }
+
   // 1. Limpieza de base de datos
   await prisma.mensajeIntegracion.deleteMany();
   await prisma.reporteEstado.deleteMany();
