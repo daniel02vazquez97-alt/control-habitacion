@@ -24,13 +24,13 @@ services:
       - key: JWT_REFRESH_SECRET
         generateValue: true
       - key: RECEPCION_API_KEY
-        generateValue: true
+        value: demo-recepcion-key # Clave que usa el simulador de Recepción del frontend (solo demo)
       - key: RESERVACIONES_WEBHOOK_URL
         value: "" # Dejar vacío para operar en bandeja de contingencia/demo
       - key: RESERVACIONES_WEBHOOK_SECRET
         generateValue: true
       - key: CORS_ORIGIN
-        value: "*" # Sustituir por la URL de GitHub Pages en producción
+        value: https://daniel02vazquez97-alt.github.io
       - key: TZ
         value: America/Hermosillo
       - key: TURNO_CRON
