@@ -1,6 +1,6 @@
 # Arquitectura del Sistema — FR08 Control de Habitaciones
 
-Este documento describe la arquitectura orientada a servicios (SOA), los contratos de integración y la máquina de estados del procedimiento **FR08 Control de habitaciones** del área de **Hospedaje**.
+Este documento describe la arquitectura orientada a servicios (SOA), los contratos de integración y la máquina de estados del procedimiento **FR08 Control de habitaciones** del área de **Control de Habitación**.
 
 ---
 
@@ -13,11 +13,11 @@ El sistema gestiona el ciclo de vida operativo de las habitaciones de un resort 
 ```mermaid
 flowchart LR
     Recepcion["Sistemas Externos<br/><b>Recepción</b>"]
-    Hospedaje["Sistema Central<br/><b>FR08 Hospedaje (SOA)</b>"]
+    ControlHabitacion["Sistema Central<br/><b>FR08 Control de Habitación (SOA)</b>"]
     Reservaciones["Sistemas Externos<br/><b>Reservaciones</b>"]
 
-    Recepcion -->|"Check-out (REC-HOSP-1)<br/>Check-in (REC-HOSP-2)"| Hospedaje
-    Hospedaje -->|"Reporte Inicial (HOSP-RES-1)<br/>Cambio de Estado (HOSP-RES-2)"| Reservaciones
+    Recepcion -->|"Check-out (REC-HOSP-1)<br/>Check-in (REC-HOSP-2)"| ControlHabitacion
+    ControlHabitacion -->|"Reporte Inicial (HOSP-RES-1)<br/>Cambio de Estado (HOSP-RES-2)"| Reservaciones
 ```
 
 ---
@@ -43,7 +43,7 @@ Cada servicio está implementado como un módulo backend desacoplado con su prop
 
 ### Estados Internos vs. Externos
 
-| Estado Externo (Reservaciones) | Estados Internos (Hospedaje) | Descripción Operativa |
+| Estado Externo (Reservaciones) | Estados Internos (Control de Habitación) | Descripción Operativa |
 |---|---|---|
 | **`DISPONIBLE`** | `VACANTE_INSPECCIONADA` | Habitación aprobada, limpia e inspeccionada; lista para venta. |
 | **`BLOQUEADA`** | `BLOQUEADA` | Habitación fuera de servicio por averías o mantenimiento. |
@@ -100,7 +100,7 @@ stateDiagram-v2
 
 ## 5. Contratos de Integración
 
-### Entrantes (Recepción → Hospedaje)
+### Entrantes (Recepción → Control de Habitación)
 Requieren encabezado `X-API-Key: <RECEPCION_API_KEY>`.
 
 #### 1. REC-HOSP-1 (Aviso de Check-Out)
@@ -146,7 +146,7 @@ Requieren encabezado `X-API-Key: <RECEPCION_API_KEY>`.
 }
 ```
 
-### Salientes (Hospedaje → Reservaciones)
+### Salientes (Control de Habitación → Reservaciones)
 Enviados mediante webhook POST a `RESERVACIONES_WEBHOOK_URL` con cabecera `X-Signature` calculada con HMAC-SHA256 del cuerpo y el secreto `RESERVACIONES_WEBHOOK_SECRET`.
 
 #### 1. HOSP-RES-1 (Reporte Inicial de Turno)

@@ -1,7 +1,7 @@
 import { EstadoHabitacionInterno, EstadoHabitacionExterno } from '../enums/estados.enum';
 
 /**
- * Mapeo centralizado único de estados internos de Hospedaje hacia estados externos de Reservaciones.
+ * Mapeo centralizado único de estados internos de Control de Habitación hacia estados externos de Reservaciones.
  *
  * Reglas de negocio:
  * - DISPONIBLE: únicamente VACANTE_INSPECCIONADA (lista para vender y ocupar).
@@ -20,7 +20,7 @@ export const MAPEO_ESTADOS_INTERNOS_A_EXTERNOS: Record<
 };
 
 /**
- * Obtiene el estado externo para Reservaciones a partir del estado interno de Hospedaje.
+ * Obtiene el estado externo para Reservaciones a partir del estado interno de Control de Habitación.
  */
 export function obtenerEstadoExterno(
   estadoInterno: EstadoHabitacionInterno,

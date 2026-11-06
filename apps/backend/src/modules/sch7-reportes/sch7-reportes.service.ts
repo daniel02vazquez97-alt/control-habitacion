@@ -12,7 +12,7 @@ import { EventoEstadoCambiado } from '../sch2-inventario/sch2-inventario.service
 import {
   EstadoHabitacionInterno,
   obtenerEstadoExterno,
-} from '@hospedaje/shared';
+} from '@control-habitacion/shared';
 
 @Injectable()
 export class Sch7ReportesService {

@@ -29,7 +29,7 @@ import {
   PUNTOS_INSPECCION_FR08_02,
   EstadoHabitacionInterno,
   RolEmpleado,
-} from '@hospedaje/shared';
+} from '@control-habitacion/shared';
 
 export const SupervisorPanel: React.FC = () => {
   const queryClient = useQueryClient();

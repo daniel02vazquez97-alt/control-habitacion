@@ -42,7 +42,7 @@ export const Login: React.FC = () => {
           FR08 Control de Habitaciones
         </h2>
         <p className="mt-2 text-sm text-slate-400">
-          Área de Hospedaje — Sistema de Control Operativo
+          Área de Control de Habitación — Sistema de Control Operativo
         </p>
       </div>
 

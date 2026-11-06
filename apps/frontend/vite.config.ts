@@ -8,4 +8,14 @@ export default defineConfig({
     port: 5173,
     host: true,
   },
+  // @control-habitacion/shared se publica como CommonJS (lo consume también el backend NestJS);
+  // se fuerza su pre-empaquetado y conversión a ESM en dev y en build.
+  optimizeDeps: {
+    include: ['@control-habitacion/shared'],
+  },
+  build: {
+    commonjsOptions: {
+      include: [/packages[\\/]shared/, /node_modules/],
+    },
+  },
 });

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "=== Iniciando Servicio Backend FR08 Hospedaje ==="
+echo "=== Iniciando Servicio Backend FR08 Control de Habitación ==="
 echo "Zona horaria configurada: $TZ"
 
 # Aplicar migraciones pendientes de Prisma

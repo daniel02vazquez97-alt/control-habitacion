@@ -3,7 +3,7 @@ services:
   # Servicio Web Backend NestJS
   # ----------------------------------------------------
   - type: web
-    name: hospedaje-backend
+    name: control-habitacion-backend
     env: docker
     dockerfilePath: apps/backend/Dockerfile
     dockerContext: .
@@ -17,7 +17,7 @@ services:
         value: 3000
       - key: DATABASE_URL
         fromDatabase:
-          name: hospedaje-postgres
+          name: control-habitacion-postgres
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
@@ -44,8 +44,8 @@ services:
 # Base de Datos PostgreSQL Gestionada en Render
 # ----------------------------------------------------
 databases:
-  - name: hospedaje-postgres
+  - name: control-habitacion-postgres
     plan: free
     region: oregon
-    databaseName: hospedaje_db
-    user: hospedaje_user
+    databaseName: control_habitacion_db
+    user: control_habitacion_user

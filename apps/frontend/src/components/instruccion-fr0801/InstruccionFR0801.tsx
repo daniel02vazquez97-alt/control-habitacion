@@ -55,7 +55,7 @@ export const InstruccionFR0801: React.FC = () => {
       </div>
 
       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Área de Hospedaje</span>
+        <span>Área de Control de Habitación</span>
         <span>Revisión vigente 2026</span>
       </div>
     </div>

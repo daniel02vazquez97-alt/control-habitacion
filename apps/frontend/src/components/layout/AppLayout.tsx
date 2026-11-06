@@ -17,7 +17,7 @@ export const AppLayout: React.FC = () => {
         <Outlet />
       </main>
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        Procedimiento FR08 Control de Habitaciones &copy; {new Date().getFullYear()} Área de Hospedaje. Arquitectura Orientada a Servicios (SOA).
+        Procedimiento FR08 Control de Habitaciones &copy; {new Date().getFullYear()} Área de Control de Habitación. Arquitectura Orientada a Servicios (SOA).
       </footer>
     </div>
   );

@@ -9,7 +9,7 @@ import { Sch3NotificacionesService } from '../sch3-notificaciones/sch3-notificac
 import {
   EstadoHabitacionInterno,
   obtenerEstadoExterno,
-} from '@hospedaje/shared';
+} from '@control-habitacion/shared';
 
 @Injectable()
 export class Sch1TurnoService {

@@ -17,7 +17,7 @@ import {
   apiActualizarReposicionBlancos,
   apiReportarHabitacionLimpia,
 } from '../api/servicios';
-import { RolEmpleado } from '@hospedaje/shared';
+import { RolEmpleado } from '@control-habitacion/shared';
 
 export const MisTareas: React.FC = () => {
   const { user } = useAuth();

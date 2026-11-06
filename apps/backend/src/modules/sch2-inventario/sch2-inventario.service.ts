@@ -16,7 +16,7 @@ import {
   EstadoHabitacionInterno,
   esTransicionValida,
   obtenerEstadoExterno,
-} from '@hospedaje/shared';
+} from '@control-habitacion/shared';
 
 export interface EventoEstadoCambiado {
   habitacionId: string;

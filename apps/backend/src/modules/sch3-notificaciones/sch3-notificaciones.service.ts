@@ -18,7 +18,7 @@ import {
   EstadoHabitacionExterno,
   HospRes1ReporteInicialDto,
   HospRes2CambioEstadoDto,
-} from '@hospedaje/shared';
+} from '@control-habitacion/shared';
 
 @Injectable()
 export class Sch3NotificacionesService {
@@ -31,7 +31,7 @@ export class Sch3NotificacionesService {
   ) {}
 
   // ----------------------------------------------------
-  // ENTRANTES: Recepción -> Hospedaje
+  // ENTRANTES: Recepción -> Control de Habitación
   // ----------------------------------------------------
 
   async procesarCheckOut(dto: CheckOutDto) {
@@ -128,7 +128,7 @@ export class Sch3NotificacionesService {
   }
 
   // ----------------------------------------------------
-  // SALIENTES: Hospedaje -> Reservaciones (Webhooks)
+  // SALIENTES: Control de Habitación -> Reservaciones (Webhooks)
   // ----------------------------------------------------
 
   async enviarReporteInicialReservaciones(payload: HospRes1ReporteInicialDto) {
@@ -161,7 +161,7 @@ export class Sch3NotificacionesService {
     const signature = crypto.createHmac('sha256', secret).update(payloadJson).digest('hex');
 
     // Crear registro inicial en bandeja saliente
-    let mensaje = await this.prisma.mensajeIntegracion.create({
+    const mensaje = await this.prisma.mensajeIntegracion.create({
       data: {
         idMensaje,
         direccion: DireccionMensaje.SALIENTE,

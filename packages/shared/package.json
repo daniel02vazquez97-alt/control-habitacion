@@ -1,5 +1,5 @@
 {
-  "name": "@hospedaje/shared",
+  "name": "@control-habitacion/shared",
   "version": "1.0.0",
   "description": "Tipos, enums, constantes e interfaces compartidas para FR08 Control de habitaciones",
   "main": "dist/index.js",

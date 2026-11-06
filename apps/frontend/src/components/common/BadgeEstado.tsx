@@ -1,5 +1,5 @@
 import React from 'react';
-import { EstadoHabitacionInterno } from '@hospedaje/shared';
+import { EstadoHabitacionInterno } from '@control-habitacion/shared';
 
 interface Props {
   estado: EstadoHabitacionInterno | string;

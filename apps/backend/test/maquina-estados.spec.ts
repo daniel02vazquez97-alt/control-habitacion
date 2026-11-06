@@ -4,7 +4,7 @@ import {
   esTransicionValida,
   obtenerEstadoExterno,
   PUNTOS_INSPECCION_FR08_02,
-} from '@hospedaje/shared';
+} from '@control-habitacion/shared';
 import { Sch2InventarioService } from '../src/modules/sch2-inventario/sch2-inventario.service';
 import { ConflictException } from '@nestjs/common';
 import { OrigenBitacora } from '@prisma/client';

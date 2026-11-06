@@ -19,7 +19,7 @@ import {
   apiSimularCheckInRecepcion,
   apiObtenerHabitaciones,
 } from '../api/servicios';
-import { EstadoHabitacionInterno } from '@hospedaje/shared';
+import { EstadoHabitacionInterno } from '@control-habitacion/shared';
 
 export const IntegracionesPanel: React.FC = () => {
   const queryClient = useQueryClient();

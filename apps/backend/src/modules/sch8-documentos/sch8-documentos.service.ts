@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as PDFDocument from 'pdfkit';
+import PDFDocument from 'pdfkit';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -59,7 +59,7 @@ export class Sch8DocumentosService {
 
         // Encabezado institucional
         doc.rect(40, 40, 515, 60).fillAndStroke('#1E3A8A', '#1E3A8A');
-        doc.fontSize(16).fillColor('#FFFFFF').text('RESORT & SPA HOSPEDAJE', 50, 50, { align: 'center' });
+        doc.fontSize(16).fillColor('#FFFFFF').text('RESORT & SPA - CONTROL DE HABITACIÓN', 50, 50, { align: 'center' });
         doc.fontSize(12).text('FORMATO FR08-03: REPORTE DE ESTADO DE HABITACIÓN', 50, 72, { align: 'center' });
 
         doc.moveDown(3);
@@ -118,7 +118,7 @@ export class Sch8DocumentosService {
 
         // Pie de página
         doc.fontSize(8).fillColor('#94A3B8').text(
-          `Documento oficial del Sistema FR08 Hospedaje. Generado el ${new Date().toISOString()}`,
+          `Documento oficial del Sistema FR08 Control de Habitación. Generado el ${new Date().toISOString()}`,
           50,
           780,
           { align: 'center', width: 495 },
@@ -149,7 +149,7 @@ export class Sch8DocumentosService {
 
         // Encabezado
         doc.rect(40, 40, 515, 60).fillAndStroke('#065F46', '#065F46');
-        doc.fontSize(16).fillColor('#FFFFFF').text('RESORT & SPA HOSPEDAJE', 50, 50, { align: 'center' });
+        doc.fontSize(16).fillColor('#FFFFFF').text('RESORT & SPA - CONTROL DE HABITACIÓN', 50, 50, { align: 'center' });
         doc.fontSize(12).text('FORMATO FR08-02: LISTA DE CHEQUEO DE INSPECCIÓN', 50, 72, { align: 'center' });
 
         doc.moveDown(3);

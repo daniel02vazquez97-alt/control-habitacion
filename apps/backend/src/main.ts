@@ -42,7 +42,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Procedimiento FR08 Control de Habitaciones — API SOA')
     .setDescription(
-      'Documentación técnica interactiva de los 8 servicios SOA del área de Hospedaje y sus integraciones con Recepción y Reservaciones.',
+      'Documentación técnica interactiva de los 8 servicios SOA del área de Control de Habitación y sus integraciones con Recepción y Reservaciones.',
     )
     .setVersion('1.0.0')
     .addBearerAuth()
@@ -54,7 +54,7 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  logger.log(`Servidor FR08 Hospedaje iniciado en el puerto ${port}`);
+  logger.log(`Servidor FR08 Control de Habitación iniciado en el puerto ${port}`);
   logger.log(`Documentación Swagger disponible en: http://localhost:${port}/api/docs`);
 }
 

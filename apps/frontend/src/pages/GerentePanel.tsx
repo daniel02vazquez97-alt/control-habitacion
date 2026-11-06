@@ -22,7 +22,7 @@ import {
   obtenerUrlDescargaPdf,
 } from '../api/servicios';
 import { Modal } from '../components/common/Modal';
-import { RolEmpleado } from '@hospedaje/shared';
+import { RolEmpleado } from '@control-habitacion/shared';
 
 export const GerentePanel: React.FC = () => {
   const queryClient = useQueryClient();
@@ -89,7 +89,7 @@ export const GerentePanel: React.FC = () => {
       {/* Encabezado */}
       <div>
         <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Panel de Gerencia de Hospedaje
+          Panel de Gerencia de Control de Habitación
         </h2>
         <p className="text-sm text-slate-500">
           Supervisión ejecutiva, métricas de ocupación, auditoría de reportes oficiales FR08-03 y administración del talento.
@@ -461,7 +461,7 @@ export const GerentePanel: React.FC = () => {
               <option value={RolEmpleado.CAMARISTA}>Camarista</option>
               <option value={RolEmpleado.AUXILIAR}>Auxiliar de Habitaciones</option>
               <option value={RolEmpleado.SUPERVISOR}>Supervisor de Housekeeping</option>
-              <option value={RolEmpleado.GERENTE}>Gerente de Hospedaje</option>
+              <option value={RolEmpleado.GERENTE}>Gerente de Control de Habitación</option>
             </select>
           </div>
 

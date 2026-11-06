@@ -18,7 +18,7 @@ import {
 } from '../api/servicios';
 import { BadgeEstado } from '../components/common/BadgeEstado';
 import { Modal } from '../components/common/Modal';
-import { EstadoHabitacionInterno } from '@hospedaje/shared';
+import { EstadoHabitacionInterno } from '@control-habitacion/shared';
 
 export const TableroHabitaciones: React.FC = () => {
   const [filtroPiso, setFiltroPiso] = useState<number | undefined>(undefined);

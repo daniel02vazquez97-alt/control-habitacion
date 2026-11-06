@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TableroHabitaciones } from '../src/pages/TableroHabitaciones';
-import { EstadoHabitacionInterno } from '@hospedaje/shared';
 
 // Mock de API
 vi.mock('../src/api/servicios', () => ({
@@ -15,9 +14,9 @@ vi.mock('../src/api/servicios', () => ({
   apiObtenerContadores: vi.fn().mockResolvedValue({
     total: 3,
     porEstado: {
-      [EstadoHabitacionInterno.OCUPADA]: 1,
-      [EstadoHabitacionInterno.VACANTE_SUCIA]: 1,
-      [EstadoHabitacionInterno.VACANTE_INSPECCIONADA]: 1,
+      OCUPADA: 1,
+      VACANTE_SUCIA: 1,
+      VACANTE_INSPECCIONADA: 1,
     },
   }),
   apiObtenerDetalleHabitacion: vi.fn(),

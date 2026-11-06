@@ -6,23 +6,25 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Instalar dependencias necesarias para compilar módulos nativos si se requieren
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl python3 make g++
 
 # Copiar manifiestos de paquetes del monorepo
-COPY package.json tsconfig.base.json tsconfig.json ./
+COPY package.json package-lock.json tsconfig.base.json tsconfig.json ./
 COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
-COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/nest-cli.json ./apps/backend/
+COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/tsconfig.build.json apps/backend/nest-cli.json ./apps/backend/
 COPY apps/backend/prisma ./apps/backend/prisma/
 
-# Instalar todas las dependencias
-RUN npm install
+# Instalar todas las dependencias (reproducible con package-lock.json)
+RUN npm ci
+# Con workspaces, apps/backend/node_modules puede no existir; se crea para que el COPY de la etapa final no falle
+RUN mkdir -p apps/backend/node_modules
 
 # Copiar código fuente
 COPY packages/shared/src ./packages/shared/src
 COPY apps/backend/src ./apps/backend/src
 
 # Compilar paquetes
-RUN npm --workspace=@hospedaje/shared run build
+RUN npm --workspace=@control-habitacion/shared run build
 WORKDIR /app/apps/backend
 RUN npx prisma generate
 RUN npm run build

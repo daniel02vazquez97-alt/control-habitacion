@@ -24,7 +24,7 @@ async function main() {
   const saltRounds = 10;
   const passwordHash = await bcrypt.hash(demoPassword, saltRounds);
 
-  console.log('--- Iniciando Seed del Sistema FR08 Hospedaje ---');
+  console.log('--- Iniciando Seed del Sistema FR08 Control de Habitación ---');
 
   // 1. Limpieza de base de datos
   await prisma.mensajeIntegracion.deleteMany();

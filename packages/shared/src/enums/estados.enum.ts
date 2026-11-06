@@ -1,5 +1,5 @@
 /**
- * Estados internos de una habitación dentro del procedimiento FR08 Hospedaje.
+ * Estados internos de una habitación dentro del procedimiento FR08 Control de Habitación.
  */
 export enum EstadoHabitacionInterno {
   VACANTE_SUCIA = 'VACANTE_SUCIA',

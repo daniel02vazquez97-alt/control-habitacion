@@ -27,7 +27,7 @@ jobs:
         env:
           POSTGRES_USER: test_user
           POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_hospedaje
+          POSTGRES_DB: test_control_habitacion
         ports:
           - 5432:5432
         options: >-
@@ -37,7 +37,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_hospedaje?schema=public
+      DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_control_habitacion?schema=public
       JWT_SECRET: ci-test-jwt-secret-key-2026
       JWT_REFRESH_SECRET: ci-test-jwt-refresh-secret-key-2026
       RECEPCION_API_KEY: demo-recepcion-key
@@ -57,14 +57,14 @@ jobs:
       - name: Instalar dependencias del monorepo
         run: npm ci
 
-      - name: Compilar paquete compartido @hospedaje/shared
+      - name: Compilar paquete compartido @control-habitacion/shared
         run: npm run build:shared
 
       - name: Verificación de estilo (ESLint)
         run: npm run lint:backend
 
       - name: Verificación estricta de tipos (TypeScript Typecheck)
-        run: npm --workspace=@hospedaje/backend run typecheck
+        run: npm --workspace=@control-habitacion/backend run typecheck
 
       - name: Generar cliente de Prisma
         run: npm run prisma:generate
@@ -98,14 +98,14 @@ jobs:
       - name: Instalar dependencias del monorepo
         run: npm ci
 
-      - name: Compilar paquete compartido @hospedaje/shared
+      - name: Compilar paquete compartido @control-habitacion/shared
         run: npm run build:shared
 
       - name: Verificación de estilo (ESLint)
         run: npm run lint:frontend
 
       - name: Verificación estricta de tipos (TypeScript Typecheck)
-        run: npm --workspace=@hospedaje/frontend run typecheck
+        run: npm --workspace=@control-habitacion/frontend run typecheck
 
       - name: Ejecutar pruebas unitarias con Vitest
         run: npm run test:frontend

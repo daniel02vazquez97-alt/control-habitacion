@@ -1,7 +1,7 @@
 {
-  "name": "@hospedaje/frontend",
+  "name": "@control-habitacion/frontend",
   "version": "1.0.0",
-  "description": "Frontend React para FR08 Control de habitaciones - Hospedaje",
+  "description": "Frontend React para FR08 Control de Habitación",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hospedaje/shared": "*",
+    "@control-habitacion/shared": "*",
     "@tanstack/react-query": "^5.39.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.379.0",

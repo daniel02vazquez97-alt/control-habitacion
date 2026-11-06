@@ -5,7 +5,7 @@ import {
   RolEmpleado,
   RecHosp1CheckOutDto,
   RecHosp2CheckInDto,
-} from '@hospedaje/shared';
+} from '@control-habitacion/shared';
 
 // ---------------------------------------------
 // Autenticación

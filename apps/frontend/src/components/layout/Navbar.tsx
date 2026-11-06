@@ -12,7 +12,7 @@ import {
   Hotel,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { RolEmpleado } from '@hospedaje/shared';
+import { RolEmpleado } from '@control-habitacion/shared';
 
 export const Navbar: React.FC = () => {
   const { user, logout, hasRole } = useAuth();
@@ -49,7 +49,7 @@ export const Navbar: React.FC = () => {
             </div>
             <div>
               <span className="text-xs uppercase font-extrabold tracking-wider text-blue-200">
-                Resort Hospedaje
+                Control de Habitación
               </span>
               <h1 className="text-base font-bold leading-none tracking-tight">
                 FR08 Control de Habitaciones

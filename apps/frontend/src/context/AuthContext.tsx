@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { RolEmpleado } from '@hospedaje/shared';
+import { RolEmpleado } from '@control-habitacion/shared';
 import { apiLogin } from '../api/servicios';
 
 export interface UserSession {
