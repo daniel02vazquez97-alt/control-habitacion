@@ -60,14 +60,14 @@ jobs:
       - name: Compilar paquete compartido @control-habitacion/shared
         run: npm run build:shared
 
+      - name: Generar cliente de Prisma
+        run: npm run prisma:generate
+
       - name: Verificación de estilo (ESLint)
         run: npm run lint:backend
 
       - name: Verificación estricta de tipos (TypeScript Typecheck)
         run: npm --workspace=@control-habitacion/backend run typecheck
-
-      - name: Generar cliente de Prisma
-        run: npm run prisma:generate
 
       - name: Aplicar migraciones en PostgreSQL de prueba
         run: npm run prisma:migrate
