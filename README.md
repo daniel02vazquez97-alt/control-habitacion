@@ -17,10 +17,7 @@
    - 5.1 [Variables de entorno del backend](#51-variables-de-entorno-del-backend)
    - 5.2 [Variables de entorno del frontend](#52-variables-de-entorno-del-frontend)
    - 5.3 [GitHub Actions — Secrets y Variables](#53-github-actions--secrets-y-variables)
-   - 5.4 [GitHub Pages](#54-github-pages)
-   - 5.5 [GitHub Container Registry (GHCR)](#55-github-container-registry-ghcr)
-   - 5.6 [Render (backend en la nube)](#56-render-backend-en-la-nube)
-   - 5.7 [Base de datos gratuita: Neon o Supabase](#57-base-de-datos-gratuita-neon-o-supabase)
+   - 5.4 [Despliegue en Azure](#54-despliegue-en-azure)
 6. [Estructura del repositorio](#6-estructura-del-repositorio)
 7. [Servicios del backend (SCH-1 … SCH-8)](#7-servicios-del-backend-sch-1--sch-8)
 8. [Máquina de estados de habitación](#8-máquina-de-estados-de-habitación)
@@ -45,7 +42,7 @@ monorepo/
 ```
 
 El backend expone una API REST versionada en `/api/v1` con documentación Swagger en `/api/docs`.
-El frontend es una SPA con HashRouter desplegable en GitHub Pages sin servidor.
+El frontend es una SPA con HashRouter. En producción todo corre en Azure: frontend en **Static Web Apps**, backend en **Container Apps** y base de datos en **PostgreSQL servidor flexible** (ver [`docs/despliegue-azure.md`](docs/despliegue-azure.md)).
 
 Para el diagrama completo de componentes y flujos de integración consulta [`docs/arquitectura.md`](docs/arquitectura.md).
 
@@ -188,7 +185,7 @@ Archivo: `apps/backend/.env` (nunca subas este archivo al repositorio).
 | `RECEPCION_API_KEY` | API Key que debe enviar Recepción en `X-API-Key` | Cadena aleatoria |
 | `RESERVACIONES_WEBHOOK_URL` | URL del webhook destino de Reservaciones | `https://res.resort.com/webhook` |
 | `RESERVACIONES_WEBHOOK_SECRET` | Secreto HMAC-SHA256 para firmar webhook | Cadena aleatoria |
-| `CORS_ORIGIN` | Origen permitido (URL del frontend) | `https://tu-usuario.github.io` |
+| `CORS_ORIGIN` | Origen permitido (URL del frontend) | `https://<nombre>.azurestaticapps.net` |
 | `PORT` | Puerto del servidor | `3000` |
 | `TZ` | Zona horaria del cron | `America/Hermosillo` |
 | `TURNO_CRON` | Expresión cron del turno | `0 7 * * *` |
@@ -202,81 +199,43 @@ Archivo: `apps/frontend/.env`.
 |---|---|---|
 | `VITE_API_URL` | URL base del backend | `http://localhost:3000/api/v1` |
 | `VITE_DEMO_MODE` | Activa el simulador de Recepción en la UI | `true` |
-| `VITE_BASE_PATH` | Ruta base del sitio (GitHub Pages) | `/control-habitacion/` |
+| `VITE_BASE_PATH` | Ruta base del sitio | `/` |
 
 ### 5.3 GitHub Actions — Secrets y Variables
 
-En tu repositorio: **Settings → Secrets and variables → Actions**.
+En tu repositorio: **Settings → Secrets and variables → Actions**. El script `infra/azure/crear-recursos.ps1` los configura solo si tienes GitHub CLI (`gh`); si no, imprime los valores.
 
-**Secrets** (cifrados, solo para valores sensibles):
-
-| Nombre | Valor |
-|---|---|
-| `RENDER_DEPLOY_HOOK_URL` | URL del deploy hook de Render (incluye el token) |
-
-**Variables** (visibles en logs, solo para valores no sensibles):
+**Secrets:**
 
 | Nombre | Valor |
 |---|---|
-| `VITE_API_URL` | URL del backend en Render, ej: `https://control-habitacion-backend.onrender.com/api/v1` |
+| `AZURE_CLIENT_ID` | Id. de la aplicación de Entra ID con credencial federada (OIDC) |
+| `AZURE_TENANT_ID` | Id. del tenant de Azure |
+| `AZURE_SUBSCRIPTION_ID` | Id. de la suscripción |
+| `AZURE_STATIC_WEB_APPS_API_TOKEN` | Token de despliegue de la Static Web App |
+
+**Variables:**
+
+| Nombre | Valor |
+|---|---|
+| `VITE_API_URL` | `https://<fqdn-de-la-container-app>/api/v1` |
 | `VITE_DEMO_MODE` | `true` |
 
-> Las variables `JWT_SECRET`, `RECEPCION_API_KEY`, etc. se configuran directamente en el panel de Render, **no** en GitHub Actions.
+> `DATABASE_URL`, `JWT_SECRET`, `RECEPCION_API_KEY`, etc. viven como **secretos de la Container App** en Azure, no en GitHub.
 
-### 5.4 GitHub Pages
+### 5.4 Despliegue en Azure
 
-1. Entra a **Settings → Pages** de tu repositorio.
-2. En **Source**, selecciona **"GitHub Actions"**.
-3. Haz push a `main`. El workflow `deploy.yml` construirá el frontend y lo publicará.
-4. La URL del sitio será `https://TU_USUARIO.github.io/control-habitacion/`.
-5. Actualiza la variable `VITE_API_URL` en GitHub Actions con la URL del backend en Render.
+| Pieza | Servicio | Plan |
+|---|---|---|
+| Frontend | Azure Static Web Apps | Free |
+| Backend | Azure Container Apps (imagen desde GHCR) | Consumo, escala a cero |
+| Base de datos | Azure Database for PostgreSQL – servidor flexible | Burstable |
 
-### 5.5 GitHub Container Registry (GHCR)
+1. Ejecuta una vez `./infra/azure/crear-recursos.ps1` (requiere Azure CLI con `az login`).
+2. Haz push a `main`; el flujo **CD - Despliegue en Azure** publica backend y frontend.
+3. La primera vez, cambia el paquete `control-habitacion-backend` de GHCR a **Public** y vuelve a ejecutar el flujo.
 
-El workflow publica automáticamente la imagen del backend en GHCR.
-No requiere configuración adicional: usa el token `GITHUB_TOKEN` que GitHub Actions provee automáticamente.
-
-La imagen queda disponible en:
-```
-ghcr.io/daniel02vazquez97-alt/control-habitacion-backend:latest
-ghcr.io/daniel02vazquez97-alt/control-habitacion-backend:<SHA_COMMIT>
-```
-
-### 5.6 Render (backend en la nube)
-
-El archivo `render.yaml` define el servicio web y la base de datos PostgreSQL.
-
-**Pasos:**
-1. Crea una cuenta en [render.com](https://render.com).
-2. Haz clic en **"New Blueprint"** y conecta tu repositorio de GitHub.
-3. Render detectará `render.yaml` automáticamente y creará el servicio y la BD.
-4. En el servicio web, en **Environment**, agrega las variables sensibles:
-
-   | Variable | Valor |
-   |---|---|
-   | `JWT_SECRET` | Cadena aleatoria segura |
-   | `JWT_REFRESH_SECRET` | Otra cadena aleatoria |
-   | `RECEPCION_API_KEY` | Clave para Recepción |
-   | `RESERVACIONES_WEBHOOK_URL` | URL del webhook de Reservaciones (opcional) |
-   | `RESERVACIONES_WEBHOOK_SECRET` | Secreto HMAC (opcional) |
-   | `CORS_ORIGIN` | URL del frontend en GitHub Pages |
-   | `SEED_DEMO_PASSWORD` | `DemoPass2026!` |
-
-5. Copia la **Deploy Hook URL** de Render (en Settings del servicio) y agrégala como secret `RENDER_DEPLOY_HOOK_URL` en GitHub Actions.
-
-### 5.7 Base de datos gratuita: Neon o Supabase
-
-Si no quieres usar la base de datos de Render (plan de pago), puedes usar una base gratuita:
-
-**Neon (recomendado):**
-1. Crea un proyecto en [neon.tech](https://neon.tech) (plan gratuito disponible).
-2. Copia la connection string del dashboard.
-3. Úsala como `DATABASE_URL` en Render.
-
-**Supabase:**
-1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. Ve a **Settings → Database → Connection string** y elige el modo **Transaction**.
-3. Úsala como `DATABASE_URL` en Render.
+Guía completa, comandos de operación y cómo cuidar el crédito de Azure for Students: [`docs/despliegue-azure.md`](docs/despliegue-azure.md).
 
 ---
 
@@ -287,7 +246,7 @@ control-habitacion/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml              ← Lint, typecheck, tests en cada PR
-│       └── deploy.yml          ← Deploy a GitHub Pages, GHCR y Render
+│       └── deploy.yml          ← Deploy a Azure (Static Web Apps, Container Apps) vía GHCR
 ├── apps/
 │   ├── backend/
 │   │   ├── prisma/
@@ -329,7 +288,7 @@ control-habitacion/
 ├── docs/
 │   └── arquitectura.md         ← Diagramas Mermaid y contratos detallados
 ├── docker-compose.yml
-├── render.yaml
+├── infra/azure/crear-recursos.ps1   ← Crea los recursos de Azure con Azure CLI
 ├── .env.example
 └── README.md                   ← Este archivo
 ```
@@ -665,10 +624,14 @@ frontend: npm ci → lint → typecheck → test → vite build
 Se ejecuta solo en push a `main`.
 
 ```
-deploy-frontend → build Vite (con VITE_BASE_PATH) → upload-pages-artifact → deploy-pages (GitHub Pages)
-deploy-backend  → docker buildx → login GHCR → build & push imagen → curl Render deploy hook
-smoke-test      → sondeo /health con 25 reintentos (10 s delay) → falla si el backend no responde
+deploy-backend  → docker buildx → build & push a GHCR → azure/login (OIDC) → az containerapp update --image
+deploy-frontend → build Vite (VITE_API_URL) → Azure/static-web-apps-deploy (Azure Static Web Apps)
+smoke-test      → sondeo /health con 25 reintentos (10 s) → falla si el backend no responde
 ```
+
+### `reiniciar-bd.yml` — Reiniciar base de datos (prototipo)
+
+Manual (**Actions → Run workflow**, escribiendo `REINICIAR`): borra el esquema de la base en Azure, aplica todas las migraciones y carga los datos demo. Ver [`docs/despliegue-azure.md`](docs/despliegue-azure.md#3-cambiar-el-modelo-de-datos-durante-el-prototipo).
 
 > Para que `deploy.yml` funcione, debes configurar los secrets y variables descritos en la [sección 5.3](#53-github-actions--secrets-y-variables).
 
@@ -688,9 +651,9 @@ git commit -m "feat: primera migracion de base de datos prisma"
 git push
 ```
 
-### ❓ El frontend muestra pantalla en blanco en GitHub Pages
+### ❓ El frontend muestra pantalla en blanco o no carga datos
 
-Asegúrate de que `VITE_BASE_PATH` en GitHub Actions tenga el nombre exacto de tu repositorio con `/` al inicio y al final, por ejemplo `/control-habitacion/`.
+Revisa que la variable `VITE_API_URL` de GitHub Actions apunte a la Container App (termina en `/api/v1`) y vuelve a ejecutar el flujo de despliegue. Si el backend estaba en cero réplicas, la primera petición tarda unos segundos.
 
 ### ❓ Los webhooks a Reservaciones no se envían
 
@@ -713,13 +676,13 @@ El seed requiere esta variable por seguridad. Defínela antes de ejecutar:
 SEED_DEMO_PASSWORD=DemoPass2026! npx ts-node prisma/seed.ts
 ```
 
-### ❓ Render reinicia el servicio pero los datos persisten
+### ❓ ¿Se pierden los datos al desplegar?
 
-La base de datos en Render es independiente del servicio web. Los datos persisten entre deploys. Solo se pierden si eliminas el servicio de base de datos manualmente.
+No. La base de datos de Azure es independiente de la Container App, y el seed solo carga datos demo si la base está vacía (`SEED_FORCE=true` los reinicia a propósito).
 
 ### ❓ Error CORS al conectar frontend con backend
 
-Asegúrate de que `CORS_ORIGIN` en el backend tenga la URL exacta del frontend, incluyendo el protocolo y sin barra al final. Ejemplo: `https://tu-usuario.github.io`.
+Asegúrate de que `CORS_ORIGIN` en el backend tenga la URL exacta del frontend, incluyendo el protocolo y sin barra al final. Ejemplo: `https://<nombre>.azurestaticapps.net`.
 
 ---
 

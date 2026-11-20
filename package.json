@@ -27,6 +27,8 @@
     "typecheck": "npm --workspace=@control-habitacion/shared run typecheck && npm --workspace=@control-habitacion/backend run typecheck && npm --workspace=@control-habitacion/frontend run typecheck",
     "prisma:generate": "npm --workspace=@control-habitacion/backend run prisma:generate",
     "prisma:migrate": "npm --workspace=@control-habitacion/backend run prisma:migrate",
+    "prisma:migrate:dev": "npm --workspace=@control-habitacion/backend run prisma:migrate:dev --",
+    "prisma:reset": "npm --workspace=@control-habitacion/backend run prisma:reset",
     "prisma:seed": "npm --workspace=@control-habitacion/backend run prisma:seed",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },

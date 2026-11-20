@@ -15,15 +15,15 @@ permissions:
 
 jobs:
   # ----------------------------------------------------
-  # Job 1: Backend (Prisma, Postgres 16, Tests y Build)
+  # Job 1: Backend (Prisma, Postgres 18, Tests y Build)
   # ----------------------------------------------------
   backend:
-    name: Backend CI (PostgreSQL 16)
+    name: Backend CI (PostgreSQL 18)
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: test_user
           POSTGRES_PASSWORD: test_password

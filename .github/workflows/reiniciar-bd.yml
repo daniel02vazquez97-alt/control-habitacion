@@ -1,0 +1,90 @@
+name: Reiniciar base de datos (prototipo)
+
+# Borra todas las tablas de la base en Azure, vuelve a aplicar las migraciones de Prisma
+# y carga los datos de demostración. Útil mientras el modelo de datos cambia seguido.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Escribe REINICIAR para borrar todos los datos de la base en Azure'
+        required: true
+      cargar_demo:
+        description: 'Cargar los datos de demostración después de reiniciar'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_RESOURCE_GROUP: rg-control-habitaciones
+  AZURE_CONTAINER_APP: ca-control-habitacion-api
+  AZURE_PG_SERVER: control-habitacion-db
+
+jobs:
+  reiniciar:
+    name: Reiniciar esquema y datos
+    runs-on: ubuntu-latest
+    if: inputs.confirmar == 'REINICIAR'
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias y generar cliente de Prisma
+        run: |
+          npm ci
+          npm run build:shared
+          npm run prisma:generate
+
+      - name: Iniciar sesión en Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Leer la cadena de conexión desde los secretos de la Container App
+        run: |
+          az extension add --name containerapp --upgrade --only-show-errors
+          leer() {
+            az containerapp secret list -n "$AZURE_CONTAINER_APP" -g "$AZURE_RESOURCE_GROUP" --show-values \
+              --query "[?name=='$1'].value | [0]" -o tsv
+          }
+          DATABASE_URL=$(leer database-url)
+          SEED_DEMO_PASSWORD=$(leer seed-demo-password)
+          echo "::add-mask::$DATABASE_URL"
+          echo "::add-mask::$SEED_DEMO_PASSWORD"
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "SEED_DEMO_PASSWORD=$SEED_DEMO_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Abrir el firewall solo para este runner
+        run: |
+          IP=$(curl -s https://api.ipify.org)
+          echo "RUNNER_RULE=gh-runner-${{ github.run_id }}" >> "$GITHUB_ENV"
+          az postgres flexible-server firewall-rule create --resource-group "$AZURE_RESOURCE_GROUP" --server-name "$AZURE_PG_SERVER" \
+            --name "gh-runner-${{ github.run_id }}" --start-ip-address "$IP" --end-ip-address "$IP" --output none
+
+      - name: Borrar el esquema y aplicar todas las migraciones
+        run: npm run prisma:reset
+
+      - name: Cargar datos de demostración
+        if: inputs.cargar_demo
+        env:
+          SEED_FORCE: 'true'
+        run: npm run prisma:seed
+
+      - name: Cerrar el firewall
+        if: always()
+        run: |
+          if [ -n "$RUNNER_RULE" ]; then
+            az postgres flexible-server firewall-rule delete --resource-group "$AZURE_RESOURCE_GROUP" --server-name "$AZURE_PG_SERVER" \
+              --name "$RUNNER_RULE" --yes --output none
+          fi
