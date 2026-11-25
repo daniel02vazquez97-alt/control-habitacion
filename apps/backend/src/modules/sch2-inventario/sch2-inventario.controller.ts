@@ -8,8 +8,9 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  applyDecorators,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiSecurity, ApiParam } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { EstadoHabitacion, OrigenBitacora, RolEmpleado } from '@prisma/client';
 import { Sch2InventarioService } from './sch2-inventario.service';
@@ -17,15 +18,19 @@ import { CambiarEstadoDto } from './dto/cambiar-estado.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ApiKeyGuard } from '../../common/guards/api-key.guard';
+import { EdoHabitacionDto } from './dto/edo-habitacion.dto';
+
+/** Rutas internas del microservicio: JWT de usuarios de Hospedaje y control por rol. */
+const Interno = () => applyDecorators(ApiBearerAuth(), UseGuards(AuthGuard('jwt'), RolesGuard));
 
 @ApiTags('SCH-2 Inventario de Habitaciones')
-@ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('habitaciones')
 export class Sch2InventarioController {
   constructor(private readonly inventarioService: Sch2InventarioService) {}
 
   @Get()
+  @Interno()
   @ApiOperation({ summary: 'Consultar todas las habitaciones con filtros opcionales' })
   @ApiQuery({ name: 'piso', required: false, type: Number })
   @ApiQuery({ name: 'estado', required: false, enum: EstadoHabitacion })
@@ -37,18 +42,33 @@ export class Sch2InventarioController {
   }
 
   @Get('contadores')
+  @Interno()
   @ApiOperation({ summary: 'Obtener contadores de habitaciones agrupados por estado' })
   async obtenerContadores() {
     return this.inventarioService.obtenerContadoresPorEstado();
   }
 
+  @Get('disponibles')
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('X-API-Key')
+  @ApiOperation({ summary: 'Interface 15 DispHabitaciones (GET, pull): estatus de las habitaciones para Reservas (RES) y Recepción (CIO)' })
+  @ApiQuery({ name: 'estatus', required: false, enum: ['DISPONIBLE', 'OCUPADA', 'BLOQUEADA'] })
+  @ApiQuery({ name: 'tipo', required: false, enum: ['SENCILLA', 'DOBLE', 'SUITE'] })
+  @ApiResponse({ status: 200, description: 'Lista de habitaciones con número, tipo, capacidad y estatus' })
+  @ApiResponse({ status: 401, description: 'API Key inválida' })
+  async dispHabitaciones(@Query('estatus') estatus?: string, @Query('tipo') tipo?: string) {
+    return this.inventarioService.consultarDisponibilidad(estatus, tipo);
+  }
+
   @Get(':id')
+  @Interno()
   @ApiOperation({ summary: 'Consultar detalle completo de una habitación por su ID' })
   async obtenerPorId(@Param('id') id: string) {
     return this.inventarioService.consultarPorId(id);
   }
 
-  @Patch(':id/estado')
+  @Patch(':id/estado-interno')
+  @Interno()
   @HttpCode(HttpStatus.OK)
   @Roles(RolEmpleado.GERENTE, RolEmpleado.SUPERVISOR, RolEmpleado.CAMARISTA)
   @ApiOperation({ summary: 'Cambiar estado interno de una habitación evaluando la máquina de estados' })
@@ -66,5 +86,19 @@ export class Sch2InventarioController {
       user?.id,
       dto.nota,
     );
+  }
+
+  @Patch(':noHabitacion/estado')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('X-API-Key')
+  @ApiParam({ name: 'noHabitacion', example: '101' })
+  @ApiOperation({ summary: 'Interface 14 EdoHabitacion (PATCH, push): Recepción (CIO) avisa check-in o check-out' })
+  @ApiResponse({ status: 200, description: 'Estado actualizado; devuelve el estado nuevo y el acuse' })
+  @ApiResponse({ status: 401, description: 'API Key inválida' })
+  @ApiResponse({ status: 404, description: 'La habitación no existe' })
+  @ApiResponse({ status: 409, description: 'La habitación no está en un estado que permita el movimiento' })
+  async edoHabitacion(@Param('noHabitacion') noHabitacion: string, @Body() dto: EdoHabitacionDto) {
+    return this.inventarioService.procesarEdoHabitacion(noHabitacion, dto);
   }
 }

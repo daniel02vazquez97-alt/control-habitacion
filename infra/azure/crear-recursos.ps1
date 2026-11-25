@@ -203,14 +203,28 @@ if (-not $rol) {
   Ejecutar role assignment create --assignee $clientId --role Contributor --scope $scope | Out-Null
   Write-Host '  Rol Contributor asignado solo sobre el grupo de recursos'
 }
-$fed = Ejecutar ad app federated-credential list --id $clientId --query "[?name=='github-main'].name" -o tsv
-if (-not $fed) {
-  $json = @{ name = 'github-main'; issuer = 'https://token.actions.githubusercontent.com';
-             subject = "repo:${RepoGitHub}:ref:refs/heads/main"; audiences = @('api://AzureADTokenExchange') } | ConvertTo-Json
-  $tmp = New-TemporaryFile; [IO.File]::WriteAllText($tmp.FullName, $json)   # UTF-8 sin BOM
-  Ejecutar ad app federated-credential create --id $clientId --parameters "@$tmp" | Out-Null
-  Remove-Item $tmp
-  Write-Host "  Credencial federada para $RepoGitHub (rama main) creada"
+# GitHub puede presentar el sujeto con el formato clásico (repo:dueño/repo) o con los Id. inmutables
+# del dueño y del repositorio (repo:dueño@123/repo@456). Se registran los dos para que el inicio de sesión funcione siempre.
+$sujetos = @{ 'github-main' = "repo:${RepoGitHub}:ref:refs/heads/main" }
+if (Get-Command gh -ErrorAction SilentlyContinue) {
+  $ids = gh api "repos/$RepoGitHub" --jq '[.owner.id, .id] | @tsv' 2>$null
+  if ($LASTEXITCODE -eq 0 -and $ids) {
+    $dueno, $repo = $RepoGitHub.Split('/'); $idDueno, $idRepo = $ids.Trim().Split("`t")
+    $sujetos['github-main-ids'] = "repo:${dueno}@${idDueno}/${repo}@${idRepo}:ref:refs/heads/main"
+  }
+} else {
+  Write-Host '  Sin GitHub CLI: si Actions falla con AADSTS700213, agrega la credencial con el sujeto que muestra el error (ver docs/despliegue-azure.md).' -ForegroundColor Yellow
+}
+foreach ($nombre in $sujetos.Keys) {
+  $fed = Ejecutar ad app federated-credential list --id $clientId --query "[?name=='$nombre'].name" -o tsv
+  if (-not $fed) {
+    $json = @{ name = $nombre; issuer = 'https://token.actions.githubusercontent.com';
+               subject = $sujetos[$nombre]; audiences = @('api://AzureADTokenExchange') } | ConvertTo-Json
+    $tmp = New-TemporaryFile; [IO.File]::WriteAllText($tmp.FullName, $json)   # UTF-8 sin BOM
+    Ejecutar ad app federated-credential create --id $clientId --parameters "@$tmp" | Out-Null
+    Remove-Item $tmp
+    Write-Host "  Credencial federada $nombre creada: $($sujetos[$nombre])"
+  }
 }
 
 # ---------------------------------------------------------------- 5. GitHub: secrets y variables

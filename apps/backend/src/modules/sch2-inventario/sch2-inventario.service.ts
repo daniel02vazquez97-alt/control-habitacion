@@ -12,6 +12,12 @@ import {
   BitacoraEstado,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { randomUUID } from 'crypto';
+import { DireccionMensaje, EstadoMensajeIntegracion, InterfaceIntegracion } from '@prisma/client';
+import { EdoHabitacionDto, TipoMovimiento } from './dto/edo-habitacion.dto';
+
+/** Capacidad de personas por tipo de habitación (dato de la interface 15). */
+export const CAPACIDAD_POR_TIPO: Record<string, number> = { SENCILLA: 2, DOBLE: 4, SUITE: 4 };
 import {
   EstadoHabitacionInterno,
   esTransicionValida,
@@ -91,6 +97,64 @@ export class Sch2InventarioService {
     }
 
     return habitacion;
+  }
+
+  /** Interface 15 DispHabitaciones. */
+  async consultarDisponibilidad(estatus?: string, tipo?: string) {
+    const where: any = {};
+    if (tipo) where.tipo = tipo.toUpperCase();
+    const habitaciones = await this.prisma.habitacion.findMany({ where, orderBy: { noHabitacion: 'asc' } });
+    const lista = habitaciones.map((h) => ({
+      noHabitacion: h.noHabitacion,
+      tipoHabitacion: h.tipo,
+      capacidadPersonas: CAPACIDAD_POR_TIPO[h.tipo] ?? null,
+      estatus: obtenerEstadoExterno(h.estado as unknown as EstadoHabitacionInterno),
+    }));
+    return {
+      fechaHora: new Date().toISOString(),
+      habitaciones: estatus ? lista.filter((h) => h.estatus === estatus.toUpperCase()) : lista,
+    };
+  }
+
+  /** Interface 14 EdoHabitacion: CHECKIN -> OCUPADA, CHECKOUT -> VACANTE_SUCIA. */
+  async procesarEdoHabitacion(noHabitacion: string, dto: EdoHabitacionDto) {
+    const idMensaje = dto.idMensaje || randomUUID();
+    if (dto.idMensaje) {
+      const previo = await this.prisma.mensajeIntegracion.findUnique({ where: { idMensaje } });
+      if (previo) {
+        const h = await this.consultarPorNumero(noHabitacion);
+        return {
+          noHabitacion, tipoMovimiento: dto.tipoMovimiento, estadoNuevo: h.estado,
+          estatus: obtenerEstadoExterno(h.estado as unknown as EstadoHabitacionInterno),
+          acuse: { idMensaje, recibido: previo.fechaHora.toISOString() },
+        };
+      }
+    }
+    const habitacion = await this.consultarPorNumero(noHabitacion);
+    const checkIn = dto.tipoMovimiento === TipoMovimiento.CHECKIN;
+    const nuevo = checkIn ? EstadoHabitacion.OCUPADA : EstadoHabitacion.VACANTE_SUCIA;
+    const { habitacion: h } = await this.cambiarEstado(
+      habitacion.id, nuevo, OrigenBitacora.RECEPCION, null,
+      `EdoHabitacion ${dto.tipoMovimiento} recibido de Recepción. Folio ${dto.folioReserva} (${dto.fechaEntrada} a ${dto.fechaSalida}).`,
+    );
+    const msg = await this.prisma.mensajeIntegracion.create({
+      data: {
+        idMensaje,
+        direccion: DireccionMensaje.ENTRANTE,
+        interface: checkIn ? InterfaceIntegracion.REC_HOSP_2 : InterfaceIntegracion.REC_HOSP_1,
+        payload: { noHabitacion, ...dto } as any,
+        estado: EstadoMensajeIntegracion.PROCESADO,
+        intentos: 1,
+      },
+    });
+    return {
+      noHabitacion,
+      tipoMovimiento: dto.tipoMovimiento,
+      estadoAnterior: habitacion.estado,
+      estadoNuevo: h.estado,
+      estatus: obtenerEstadoExterno(h.estado as unknown as EstadoHabitacionInterno),
+      acuse: { idMensaje, recibido: msg.fechaHora.toISOString() },
+    };
   }
 
   async consultarPorNumero(noHabitacion: string): Promise<Habitacion> {

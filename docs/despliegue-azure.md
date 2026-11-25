@@ -109,5 +109,14 @@ az postgres flexible-server connect -n control-habitacion-db -u adminhabitacione
 
 ## 6. Limitaciones conocidas
 
+- **Error `AADSTS700213: No matching federated identity record` en Actions**: GitHub presentó un sujeto OIDC que no está registrado (puede venir con los Id. del dueño y del repositorio, por ejemplo `repo:dueño@123/repo@456:ref:refs/heads/main`). Copia el sujeto exacto del mensaje de error y regístralo:
+
+  ```powershell
+  $appId = az ad app list --display-name gh-actions-control-habitacion --query "[0].appId" -o tsv
+  '{"name":"github-main-ids","issuer":"https://token.actions.githubusercontent.com","subject":"<sujeto del error>","audiences":["api://AzureADTokenExchange"]}' | Set-Content -Encoding ascii fic.json
+  az ad app federated-credential create --id $appId --parameters "@fic.json"; Remove-Item fic.json
+  ```
+
+
 - **Cron de inicio de turno**: como el backend escala a cero, el cron `TURNO_CRON` solo corre si hay una réplica encendida a esa hora. El reporte inicial se puede enviar desde la pantalla del supervisor. Si se necesita automático, se puede cambiar a `--min-replicas 1` (consume crédito) o crear un *Container Apps Job* programado.
 - **Región**: si `mexicocentral` no admite Container Apps en su suscripción, ejecuten el script con `-Region southcentralus` (o la región permitida más cercana).

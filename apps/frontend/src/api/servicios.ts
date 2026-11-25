@@ -41,7 +41,7 @@ export async function apiCambiarEstado(
   nuevoEstado: EstadoHabitacionInterno,
   nota?: string,
 ) {
-  return apiRequest(`/habitaciones/${id}/estado`, {
+  return apiRequest(`/habitaciones/${id}/estado-interno`, {
     method: 'PATCH',
     body: JSON.stringify({ nuevoEstado, nota }),
   });
