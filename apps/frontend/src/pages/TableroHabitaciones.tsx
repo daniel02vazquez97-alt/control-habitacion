@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   User,
   Info,
+  CalendarDays,
 } from 'lucide-react';
 import {
   apiObtenerHabitaciones,
@@ -29,6 +30,8 @@ export const TableroHabitaciones: React.FC = () => {
   const {
     data: habitaciones = [],
     isLoading,
+    isError,
+    error,
     refetch,
     isRefetching,
   } = useQuery({
@@ -231,6 +234,19 @@ export const TableroHabitaciones: React.FC = () => {
           <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
           <p className="text-slate-600 font-medium">Cargando habitaciones...</p>
         </div>
+      ) : isError ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-red-200">
+          <AlertTriangle className="w-8 h-8 text-red-600 mx-auto mb-2" />
+          <p className="text-slate-800 font-semibold">No se pudieron cargar las habitaciones.</p>
+          <p className="text-sm text-slate-500 mt-1">{(error as Error)?.message || 'Error de conexión con el servidor.'}</p>
+        </div>
+      ) : habitaciones.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+          <Info className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+          <p className="text-slate-800 font-semibold">
+            {filtroEstado || filtroPiso !== undefined ? 'No hay habitaciones con este filtro.' : 'No hay habitaciones registradas en la base de datos.'}
+          </p>
+        </div>
       ) : (
         <div className="space-y-8">
           {pisos
@@ -337,6 +353,31 @@ export const TableroHabitaciones: React.FC = () => {
                 </p>
               </div>
             )}
+
+            {/* Reservaciones recibidas de Gestión de Reservas */}
+            <div className="bg-violet-50/60 border border-violet-200 rounded-xl p-3 text-xs text-violet-900">
+              <span className="font-bold uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                <CalendarDays className="w-4 h-4" />
+                Reservaciones (Gestión de Reservas)
+              </span>
+              {detalleHabitacion.reservaciones?.length ? (
+                <ul className="space-y-1">
+                  {detalleHabitacion.reservaciones.map((r: any) => (
+                    <li key={r.id} className="flex flex-wrap gap-x-2">
+                      <strong>{r.folioReserva}</strong>
+                      <span>
+                        {String(r.fechaEntrada).slice(0, 10)} → {String(r.fechaSalida).slice(0, 10)}
+                      </span>
+                      {r.huesped && <span>· {r.huesped}</span>}
+                      {r.numeroPersonas && <span>· {r.numeroPersonas} pers.</span>}
+                      <span className="font-semibold">· {r.estado === 'EN_CURSO' ? 'En curso' : 'Confirmada'}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Sin reservaciones próximas.</p>
+              )}
+            </div>
 
             {/* Bitácora inmutable de auditoría */}
             <div className="space-y-3">

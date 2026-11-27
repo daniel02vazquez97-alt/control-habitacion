@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -13,8 +14,14 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { randomUUID } from 'crypto';
-import { DireccionMensaje, EstadoMensajeIntegracion, InterfaceIntegracion } from '@prisma/client';
+import { DireccionMensaje, EstadoMensajeIntegracion, EstadoReservacion, InterfaceIntegracion } from '@prisma/client';
 import { EdoHabitacionDto, TipoMovimiento } from './dto/edo-habitacion.dto';
+
+/** Fecha a medianoche UTC (así se guardan las columnas DATE). */
+export function aFechaUTC(valor: string): Date {
+  const d = new Date(valor);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
 
 /** Capacidad de personas por tipo de habitación (dato de la interface 15). */
 export const CAPACIDAD_POR_TIPO: Record<string, number> = { SENCILLA: 2, DOBLE: 4, SUITE: 4 };
@@ -47,8 +54,9 @@ export class Sch2InventarioService {
 
   async consultarTodas(piso?: number, estado?: EstadoHabitacion): Promise<Habitacion[]> {
     const where: any = {};
-    if (piso !== undefined) where.piso = Number(piso);
-    if (estado !== undefined) where.estado = estado;
+    // El ValidationPipe convierte un ?piso ausente en NaN: solo se filtra si es un número válido.
+    if (piso !== undefined && piso !== null && !Number.isNaN(Number(piso))) where.piso = Number(piso);
+    if (estado) where.estado = estado;
 
     return this.prisma.habitacion.findMany({
       where,
@@ -78,6 +86,13 @@ export class Sch2InventarioService {
             auxiliar: { select: { id: true, nombre: true } },
           },
         },
+        reservaciones: {
+          where: {
+            estado: { in: [EstadoReservacion.CONFIRMADA, EstadoReservacion.EN_CURSO] },
+            fechaSalida: { gte: aFechaUTC(new Date().toISOString()) },
+          },
+          orderBy: { fechaEntrada: 'asc' },
+        },
         inspecciones: {
           orderBy: { fechaHora: 'desc' },
           take: 1,
@@ -99,19 +114,63 @@ export class Sch2InventarioService {
     return habitacion;
   }
 
-  /** Interface 15 DispHabitaciones. */
-  async consultarDisponibilidad(estatus?: string, tipo?: string) {
+  /**
+   * Interface 15 DispHabitaciones.
+   * Sin fechas: estatus en este momento. Con fechaEntrada y fechaSalida: estatus para esa estancia
+   * (BLOQUEADA si está bloqueada; OCUPADA si ya tiene una reservación que se traslapa o si la estancia
+   * empieza hoy y la habitación está ocupada; DISPONIBLE en otro caso).
+   */
+  async consultarDisponibilidad(estatus?: string, tipo?: string, fechaEntrada?: string, fechaSalida?: string) {
     const where: any = {};
     if (tipo) where.tipo = tipo.toUpperCase();
-    const habitaciones = await this.prisma.habitacion.findMany({ where, orderBy: { noHabitacion: 'asc' } });
-    const lista = habitaciones.map((h) => ({
-      noHabitacion: h.noHabitacion,
-      tipoHabitacion: h.tipo,
-      capacidadPersonas: CAPACIDAD_POR_TIPO[h.tipo] ?? null,
-      estatus: obtenerEstadoExterno(h.estado as unknown as EstadoHabitacionInterno),
-    }));
+    const porFechas = !!(fechaEntrada && fechaSalida);
+    let entrada: Date | undefined;
+    let salida: Date | undefined;
+    if (porFechas) {
+      entrada = aFechaUTC(fechaEntrada!);
+      salida = aFechaUTC(fechaSalida!);
+      if (isNaN(+entrada) || isNaN(+salida) || salida <= entrada) {
+        throw new BadRequestException({
+          codigo: 'FECHAS_INVALIDAS',
+          mensaje: 'Envía fechaEntrada y fechaSalida como AAAA-MM-DD, con la salida posterior a la entrada.',
+        });
+      }
+    }
+    const habitaciones = await this.prisma.habitacion.findMany({
+      where,
+      orderBy: { noHabitacion: 'asc' },
+      include: porFechas
+        ? {
+            reservaciones: {
+              where: {
+                estado: { in: [EstadoReservacion.CONFIRMADA, EstadoReservacion.EN_CURSO] },
+                fechaEntrada: { lt: salida },
+                fechaSalida: { gt: entrada },
+              },
+              select: { id: true },
+            },
+          }
+        : undefined,
+    });
+    const hoy = aFechaUTC(new Date().toISOString());
+    const lista = habitaciones.map((h: any) => {
+      let est = obtenerEstadoExterno(h.estado as unknown as EstadoHabitacionInterno) as string;
+      if (porFechas) {
+        if (h.estado === EstadoHabitacion.BLOQUEADA) est = 'BLOQUEADA';
+        else if (h.reservaciones.length > 0) est = 'OCUPADA';
+        else if (entrada! <= hoy && h.estado === EstadoHabitacion.OCUPADA) est = 'OCUPADA';
+        else est = 'DISPONIBLE';
+      }
+      return {
+        noHabitacion: h.noHabitacion,
+        tipoHabitacion: h.tipo,
+        capacidadPersonas: CAPACIDAD_POR_TIPO[h.tipo] ?? null,
+        estatus: est,
+      };
+    });
     return {
       fechaHora: new Date().toISOString(),
+      ...(porFechas ? { fechaEntrada: fechaEntrada!.slice(0, 10), fechaSalida: fechaSalida!.slice(0, 10) } : {}),
       habitaciones: estatus ? lista.filter((h) => h.estatus === estatus.toUpperCase()) : lista,
     };
   }
@@ -137,6 +196,15 @@ export class Sch2InventarioService {
       habitacion.id, nuevo, OrigenBitacora.RECEPCION, null,
       `EdoHabitacion ${dto.tipoMovimiento} recibido de Recepción. Folio ${dto.folioReserva} (${dto.fechaEntrada} a ${dto.fechaSalida}).`,
     );
+    // Si el folio corresponde a una reservación de esta habitación, se actualiza su estado.
+    await this.prisma.reservacion.updateMany({
+      where: {
+        folioReserva: dto.folioReserva,
+        habitacionId: habitacion.id,
+        estado: checkIn ? EstadoReservacion.CONFIRMADA : { in: [EstadoReservacion.CONFIRMADA, EstadoReservacion.EN_CURSO] },
+      },
+      data: { estado: checkIn ? EstadoReservacion.EN_CURSO : EstadoReservacion.FINALIZADA },
+    });
     const msg = await this.prisma.mensajeIntegracion.create({
       data: {
         idMensaje,

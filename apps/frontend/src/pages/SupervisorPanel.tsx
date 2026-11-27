@@ -19,7 +19,7 @@ import {
   apiObtenerHabitacionesPorInspeccionar,
   apiObtenerHabitacionesBloqueadas,
   apiRegistrarInspeccion,
-  apiConfirmarReparacion,
+  apiLiberarHabitacion,
   apiDispararReporteInicialManual,
 } from '../api/servicios';
 import { InstruccionFR0801 } from '../components/instruccion-fr0801/InstruccionFR0801';
@@ -125,7 +125,7 @@ export const SupervisorPanel: React.FC = () => {
 
   const mutacionConfirmarReparacion = useMutation({
     mutationFn: ({ id, observaciones }: { id: string; observaciones?: string }) =>
-      apiConfirmarReparacion(id, observaciones),
+      apiLiberarHabitacion(id, observaciones),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['habitacionesBloqueadas'] });
       queryClient.invalidateQueries({ queryKey: ['habitacionesSucias'] });
@@ -133,6 +133,9 @@ export const SupervisorPanel: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['contadores'] });
       setMensajeExito('Reparación confirmada: Habitación devuelta a VACANTE_SUCIA para nueva limpieza.');
       setTimeout(() => setMensajeExito(null), 5000);
+    },
+    onError: (err: any) => {
+      alert(`No se pudo confirmar la reparación: ${err.message}`);
     },
   });
 
@@ -446,11 +449,10 @@ export const SupervisorPanel: React.FC = () => {
                       </p>
                     </div>
 
-                    {reparacion && (
                       <button
                         onClick={() =>
                           mutacionConfirmarReparacion.mutate({
-                            id: reparacion.id,
+                            id: hab.id,
                             observaciones: 'Reparación verificada por el supervisor.',
                           })
                         }
@@ -460,7 +462,6 @@ export const SupervisorPanel: React.FC = () => {
                         <Wrench className="w-4 h-4" />
                         Confirmar Reparación (Retornar a Sucia)
                       </button>
-                    )}
                   </div>
                 );
               })}

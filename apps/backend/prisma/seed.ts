@@ -8,6 +8,7 @@ import {
   OrigenBitacora,
   EstadoExterno,
   TipoReporte,
+  EstadoReservacion,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -37,6 +38,7 @@ async function main() {
   }
 
   // 1. Limpieza de base de datos
+  await prisma.reservacion.deleteMany();
   await prisma.mensajeIntegracion.deleteMany();
   await prisma.reporteEstado.deleteMany();
   await prisma.reparacion.deleteMany();
@@ -175,8 +177,8 @@ async function main() {
       });
     }
 
-    // Caso de demostración para habitación 109: Bloqueada por daño con reporte técnico
-    if (item.no === '109') {
+    // Habitaciones bloqueadas (109 y 206): daño registrado en inspección con su reparación pendiente
+    if (item.estado === EstadoHabitacion.BLOQUEADA) {
       const puntosInspeccionDanio = [
         { numero: 1, descripcion: 'Cama tendida con ropa limpia', cumple: true, observacion: 'Correcto' },
         { numero: 2, descripcion: 'Toallas limpias y completas', cumple: true, observacion: 'Correcto' },
@@ -209,6 +211,34 @@ async function main() {
       });
     }
   }
+
+  // 4b. Reservaciones de demostración recibidas de Gestión de Reservas
+  const diaUTC = (dias: number) => {
+    const d = new Date();
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + dias));
+  };
+  const reservacionesDemo = [
+    { folio: 'RES-DEMO-0001', no: '201', entrada: -1, salida: 2, huesped: 'Mariana Ochoa', personas: 2, estado: EstadoReservacion.EN_CURSO },
+    { folio: 'RES-DEMO-0002', no: '104', entrada: 3, salida: 6, huesped: 'Luis Arvizu', personas: 1, estado: EstadoReservacion.CONFIRMADA },
+    { folio: 'RES-DEMO-0003', no: '208', entrada: 1, salida: 4, huesped: 'Familia Robles', personas: 4, estado: EstadoReservacion.CONFIRMADA },
+    { folio: 'RES-DEMO-0004', no: '210', entrada: 7, salida: 10, huesped: 'Sofía Bracamontes', personas: 3, estado: EstadoReservacion.CONFIRMADA },
+  ];
+  for (const r of reservacionesDemo) {
+    const hab = await prisma.habitacion.findUnique({ where: { noHabitacion: r.no } });
+    if (!hab) continue;
+    await prisma.reservacion.create({
+      data: {
+        folioReserva: r.folio,
+        habitacionId: hab.id,
+        fechaEntrada: diaUTC(r.entrada),
+        fechaSalida: diaUTC(r.salida),
+        huesped: r.huesped,
+        numeroPersonas: r.personas,
+        estado: r.estado,
+      },
+    });
+  }
+  console.log(`✔ ${reservacionesDemo.length} reservaciones de demostración creadas.`);
 
   // 5. Crear Reporte Inicial de demostración FR08-03
   const anio = hoy.getFullYear();

@@ -54,10 +54,18 @@ export class Sch2InventarioController {
   @ApiOperation({ summary: 'Interface 15 DispHabitaciones (GET, pull): estatus de las habitaciones para Reservas (RES) y Recepción (CIO)' })
   @ApiQuery({ name: 'estatus', required: false, enum: ['DISPONIBLE', 'OCUPADA', 'BLOQUEADA'] })
   @ApiQuery({ name: 'tipo', required: false, enum: ['SENCILLA', 'DOBLE', 'SUITE'] })
+  @ApiQuery({ name: 'fechaEntrada', required: false, description: 'AAAA-MM-DD; junto con fechaSalida calcula el estatus para esa estancia' })
+  @ApiQuery({ name: 'fechaSalida', required: false, description: 'AAAA-MM-DD' })
   @ApiResponse({ status: 200, description: 'Lista de habitaciones con número, tipo, capacidad y estatus' })
+  @ApiResponse({ status: 400, description: 'Fechas inválidas' })
   @ApiResponse({ status: 401, description: 'API Key inválida' })
-  async dispHabitaciones(@Query('estatus') estatus?: string, @Query('tipo') tipo?: string) {
-    return this.inventarioService.consultarDisponibilidad(estatus, tipo);
+  async dispHabitaciones(
+    @Query('estatus') estatus?: string,
+    @Query('tipo') tipo?: string,
+    @Query('fechaEntrada') fechaEntrada?: string,
+    @Query('fechaSalida') fechaSalida?: string,
+  ) {
+    return this.inventarioService.consultarDisponibilidad(estatus, tipo, fechaEntrada, fechaSalida);
   }
 
   @Get(':id')

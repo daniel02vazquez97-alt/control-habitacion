@@ -14,6 +14,7 @@ import { Sch5PersonalModule } from './modules/sch5-personal/sch5-personal.module
 import { Sch6InspeccionModule } from './modules/sch6-inspeccion/sch6-inspeccion.module';
 import { Sch7ReportesModule } from './modules/sch7-reportes/sch7-reportes.module';
 import { Sch8DocumentosModule } from './modules/sch8-documentos/sch8-documentos.module';
+import { Sch9ReservacionesModule } from './modules/sch9-reservaciones/sch9-reservaciones.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { Sch8DocumentosModule } from './modules/sch8-documentos/sch8-documentos.
     Sch6InspeccionModule,
     Sch7ReportesModule,
     Sch8DocumentosModule,
+    Sch9ReservacionesModule,
   ],
   controllers: [HealthController],
 })

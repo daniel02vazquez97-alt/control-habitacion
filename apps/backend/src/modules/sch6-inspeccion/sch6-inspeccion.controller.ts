@@ -53,7 +53,7 @@ export class Sch6InspeccionController {
 
   @Post('reparaciones/:id/confirmar')
   @HttpCode(HttpStatus.OK)
-  @Roles(RolEmpleado.SUPERVISOR)
+  @Roles(RolEmpleado.SUPERVISOR, RolEmpleado.GERENTE)
   @ApiOperation({ summary: 'Confirmar reparación técnica y regresar habitación a VACANTE_SUCIA' })
   @ApiResponse({ status: 200, description: 'Reparación confirmada y habitación lista para nueva limpieza' })
   async confirmarReparacion(
@@ -62,5 +62,18 @@ export class Sch6InspeccionController {
     @CurrentUser() user: any,
   ) {
     return this.inspeccionService.confirmarReparacion(id, user.id, dto);
+  }
+
+  @Post('habitaciones/:habitacionId/liberar')
+  @HttpCode(HttpStatus.OK)
+  @Roles(RolEmpleado.SUPERVISOR, RolEmpleado.GERENTE)
+  @ApiOperation({ summary: 'Liberar habitación bloqueada: confirma su reparación pendiente y la regresa a VACANTE_SUCIA' })
+  @ApiResponse({ status: 200, description: 'Habitación liberada y lista para nueva limpieza' })
+  async liberarHabitacion(
+    @Param('habitacionId') habitacionId: string,
+    @Body() dto: ConfirmarReparacionDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.inspeccionService.liberarHabitacion(habitacionId, user.id, dto);
   }
 }

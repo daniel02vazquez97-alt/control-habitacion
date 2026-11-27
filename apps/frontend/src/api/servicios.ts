@@ -144,6 +144,13 @@ export async function apiRegistrarInspeccion(dto: {
   });
 }
 
+export async function apiLiberarHabitacion(habitacionId: string, observaciones?: string) {
+  return apiRequest(`/inspecciones/habitaciones/${habitacionId}/liberar`, {
+    method: 'POST',
+    body: JSON.stringify({ observaciones }),
+  });
+}
+
 export async function apiConfirmarReparacion(reparacionId: string, observaciones?: string) {
   return apiRequest(`/inspecciones/reparaciones/${reparacionId}/confirmar`, {
     method: 'POST',

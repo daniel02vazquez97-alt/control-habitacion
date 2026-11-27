@@ -61,6 +61,14 @@ enum InterfaceIntegracion {
   REC_HOSP_2
   HOSP_RES_1
   HOSP_RES_2
+  RES_HOSP_1
+}
+
+enum EstadoReservacion {
+  CONFIRMADA
+  EN_CURSO
+  FINALIZADA
+  CANCELADA
 }
 
 enum EstadoMensajeIntegracion {
@@ -89,6 +97,7 @@ model Habitacion {
   inspecciones  Inspeccion[]
   reparaciones  Reparacion[]
   reportes      ReporteEstado[]
+  reservaciones Reservacion[]
 
   @@index([estado])
   @@index([piso])
@@ -240,4 +249,23 @@ model MensajeIntegracion {
   @@index([idMensaje])
   @@index([estado])
   @@index([direccion])
+}
+
+// Reservación recibida de Gestión de Reservas: habitación rentada en un rango de fechas.
+// La fecha de salida es el día en que se desocupa; ese mismo día puede iniciar otra reservación.
+model Reservacion {
+  id             String            @id @default(uuid())
+  folioReserva   String            @unique
+  habitacionId   String
+  habitacion     Habitacion        @relation(fields: [habitacionId], references: [id], onDelete: Cascade)
+  fechaEntrada   DateTime          @db.Date
+  fechaSalida    DateTime          @db.Date
+  huesped        String?
+  numeroPersonas Int?
+  estado         EstadoReservacion @default(CONFIRMADA)
+  creadaEn       DateTime          @default(now())
+  actualizadaEn  DateTime          @updatedAt
+
+  @@index([habitacionId])
+  @@index([fechaEntrada, fechaSalida])
 }

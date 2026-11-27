@@ -209,6 +209,36 @@ export class Sch6InspeccionService {
     return reparacionActualizada;
   }
 
+  /**
+   * Libera una habitación BLOQUEADA desde la pantalla del supervisor.
+   * Si tiene una reparación pendiente la confirma; si no tiene ninguna registrada
+   * (por ejemplo, datos cargados a mano), la regresa igualmente a VACANTE_SUCIA y deja constancia en la bitácora.
+   */
+  async liberarHabitacion(habitacionId: string, supervisorId: string, dto?: ConfirmarReparacionDto) {
+    const pendiente = await this.prisma.reparacion.findFirst({
+      where: { habitacionId, confirmadaEn: null },
+      orderBy: { creadaEn: 'desc' },
+    });
+    if (pendiente) {
+      return this.confirmarReparacion(pendiente.id, supervisorId, dto);
+    }
+    const habitacion = await this.inventarioService.consultarPorId(habitacionId);
+    if (habitacion.estado !== EstadoHabitacion.BLOQUEADA) {
+      throw new BadRequestException({
+        codigo: 'HABITACION_NO_BLOQUEADA',
+        mensaje: `La habitación no está bloqueada. Estado actual: ${habitacion.estado}.`,
+      });
+    }
+    await this.inventarioService.cambiarEstado(
+      habitacionId,
+      EstadoHabitacion.VACANTE_SUCIA,
+      OrigenBitacora.USUARIO,
+      supervisorId,
+      `Habitación liberada por supervisor (sin reparación registrada). ${dto?.observaciones || ''}`.trim(),
+    );
+    return { habitacionId, estadoNuevo: EstadoHabitacion.VACANTE_SUCIA };
+  }
+
   async obtenerHabitacionesPorInspeccionar() {
     return this.prisma.habitacion.findMany({
       where: { estado: EstadoHabitacion.VACANTE_LIMPIA },
